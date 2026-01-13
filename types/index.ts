@@ -10,7 +10,6 @@ export interface MenuItem {
   id: string;
   name: string;
   price: number;
-   discountPercent: number;
   cuisine: Cuisine;
   category: string;
   image: string;
