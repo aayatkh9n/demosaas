@@ -35,13 +35,19 @@ export default function MenuItemCard({ item, cuisine }: MenuItemCardProps) {
             unoptimized
           />
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <span className="text-white font-semibold text-base">Unavailable</span>
+            <span className="text-white font-semibold text-base">
+              Unavailable
+            </span>
           </div>
         </div>
         <div className="p-5">
-          <h3 className="font-bold text-lg mb-1.5 text-gray-900">{item.name}</h3>
+          <h3 className="font-bold text-lg mb-1.5 text-gray-900">
+            {item.name}
+          </h3>
           {item.description && (
-            <p className="text-gray-500 text-sm mb-3 line-clamp-2 leading-relaxed">{item.description}</p>
+            <p className="text-gray-500 text-sm mb-3 line-clamp-2 leading-relaxed">
+              {item.description}
+            </p>
           )}
           <p className="font-bold text-xl" style={{ color: theme.primary }}>
             {formatCurrency(item.price)}
@@ -62,31 +68,41 @@ export default function MenuItemCard({ item, cuisine }: MenuItemCardProps) {
           unoptimized
         />
       </div>
+
       <div className="p-5">
-        <h3 className="font-bold text-lg mb-1.5 text-gray-900">{item.name}</h3>
+        <h3 className="font-bold text-lg mb-1.5 text-gray-900">
+          {item.name}
+        </h3>
+
         {item.description && (
-          <p className="text-gray-500 text-sm mb-4 line-clamp-2 leading-relaxed">{item.description}</p>
+          <p className="text-gray-500 text-sm mb-4 line-clamp-2 leading-relaxed">
+            {item.description}
+          </p>
         )}
+
         <div className="flex items-center justify-between">
           <p className="font-bold text-2xl" style={{ color: theme.primary }}>
             {formatCurrency(item.price)}
           </p>
+
           <button
             onClick={handleAdd}
             disabled={isAdding}
             className="px-6 py-3 rounded-full font-semibold flex items-center gap-2 transition-all duration-200 hover:brightness-110 active:scale-95 disabled:opacity-70 min-h-[44px] shadow-sm"
-            style={{ 
+            style={{
               backgroundColor: theme.primary,
-              color: theme.accent
+              color: theme.accent,
             }}
           >
-            <FiPlus className={`w-5 h-5 ${isAdding ? 'animate-pulse' : ''}`} />
-            <span className="text-base">{isAdding ? 'Added!' : 'Add'}</span>
+            <FiPlus
+              className={`w-5 h-5 ${isAdding ? 'animate-pulse' : ''}`}
+            />
+            <span className="text-base">
+              {isAdding ? 'Added!' : 'Add'}
+            </span>
           </button>
         </div>
       </div>
     </div>
   );
-}
-
-
+};

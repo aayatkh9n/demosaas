@@ -1,14 +1,11 @@
 import { MenuItem, Cuisine } from '@/types';
 
 export const menuItems: MenuItem[] = [
-  // =====================
-  // CHINESE CUISINE
-  // =====================
+  // Chinese Cuisine
   {
     id: 'ch-001',
     name: 'Kung Pao Chicken',
     price: 350,
-    discountPercent: 30,
     cuisine: 'chinese',
     category: 'Main Course',
     image: 'https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=400&h=300&fit=crop',
@@ -19,7 +16,6 @@ export const menuItems: MenuItem[] = [
     id: 'ch-002',
     name: 'Sweet and Sour Pork',
     price: 320,
-    discountPercent: 30,
     cuisine: 'chinese',
     category: 'Main Course',
     image: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop',
@@ -30,7 +26,6 @@ export const menuItems: MenuItem[] = [
     id: 'ch-003',
     name: 'Mapo Tofu',
     price: 280,
-    discountPercent: 20,
     cuisine: 'chinese',
     category: 'Vegetarian',
     image: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=400&h=300&fit=crop',
@@ -41,7 +36,6 @@ export const menuItems: MenuItem[] = [
     id: 'ch-004',
     name: 'Spring Rolls (6 pcs)',
     price: 180,
-    discountPercent: 25,
     cuisine: 'chinese',
     category: 'Appetizer',
     image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop',
@@ -52,7 +46,6 @@ export const menuItems: MenuItem[] = [
     id: 'ch-005',
     name: 'Fried Rice',
     price: 240,
-    discountPercent: 20,
     cuisine: 'chinese',
     category: 'Rice',
     image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop',
@@ -63,7 +56,6 @@ export const menuItems: MenuItem[] = [
     id: 'ch-006',
     name: 'Szechuan Noodles',
     price: 290,
-    discountPercent: 30,
     cuisine: 'chinese',
     category: 'Noodles',
     image: 'https://images.unsplash.com/photo-1585032226651-759b368d7246?w=400&h=300&fit=crop',
@@ -74,7 +66,6 @@ export const menuItems: MenuItem[] = [
     id: 'ch-007',
     name: 'Hot and Sour Soup',
     price: 160,
-    discountPercent: 15,
     cuisine: 'chinese',
     category: 'Soup',
     image: 'https://images.unsplash.com/photo-1609501676725-7186f1f4a8a9?w=400&h=300&fit=crop',
@@ -85,22 +76,18 @@ export const menuItems: MenuItem[] = [
     id: 'ch-008',
     name: 'Peking Duck',
     price: 650,
-    discountPercent: 20,
     cuisine: 'chinese',
     category: 'Main Course',
     image: 'https://images.unsplash.com/photo-1609501676725-7186f1f4a8a9?w=400&h=300&fit=crop',
     availability: false,
     description: 'Classic Peking duck with pancakes',
   },
-
-  // =====================
-  // BIRYANI CUISINE
-  // =====================
+  
+  // Biryani Cuisine
   {
     id: 'bi-001',
     name: 'Hyderabadi Chicken Biryani',
     price: 380,
-    discountPercent: 30,
     cuisine: 'biryani',
     category: 'Biryani',
     image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&h=300&fit=crop',
@@ -111,7 +98,6 @@ export const menuItems: MenuItem[] = [
     id: 'bi-002',
     name: 'Mutton Biryani',
     price: 450,
-    discountPercent: 20,
     cuisine: 'biryani',
     category: 'Biryani',
     image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&h=300&fit=crop',
@@ -122,7 +108,6 @@ export const menuItems: MenuItem[] = [
     id: 'bi-003',
     name: 'Vegetable Biryani',
     price: 280,
-    discountPercent: 25,
     cuisine: 'biryani',
     category: 'Biryani',
     image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&h=300&fit=crop',
@@ -133,7 +118,6 @@ export const menuItems: MenuItem[] = [
     id: 'bi-004',
     name: 'Egg Biryani',
     price: 260,
-    discountPercent: 20,
     cuisine: 'biryani',
     category: 'Biryani',
     image: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&h=300&fit=crop',
@@ -144,7 +128,6 @@ export const menuItems: MenuItem[] = [
     id: 'bi-005',
     name: 'Chicken Korma',
     price: 320,
-    discountPercent: 15,
     cuisine: 'biryani',
     category: 'Curry',
     image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=400&h=300&fit=crop',
@@ -155,7 +138,6 @@ export const menuItems: MenuItem[] = [
     id: 'bi-006',
     name: 'Raita',
     price: 80,
-    discountPercent: 15,
     cuisine: 'biryani',
     category: 'Side',
     image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=400&h=300&fit=crop',
@@ -166,7 +148,6 @@ export const menuItems: MenuItem[] = [
     id: 'bi-007',
     name: 'Naan Bread',
     price: 50,
-    discountPercent: 15,
     cuisine: 'biryani',
     category: 'Bread',
     image: 'https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=400&h=300&fit=crop',
@@ -177,7 +158,6 @@ export const menuItems: MenuItem[] = [
     id: 'bi-008',
     name: 'Gulab Jamun (2 pcs)',
     price: 100,
-    discountPercent: 20,
     cuisine: 'biryani',
     category: 'Dessert',
     image: 'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=400&h=300&fit=crop',
@@ -214,3 +194,5 @@ export const getMenuItemById = (id: string): MenuItem | undefined => {
 export const getAllMenuItems = (): MenuItem[] => {
   return getStoredMenuItems();
 };
+
+
