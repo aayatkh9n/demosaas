@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Default/Neutral theme */
+    --theme-primary: #1f2937;
+    --theme-dark: #111827;
+    --theme-accent: #ffffff;
+    --theme-background: #ffffff;
+    --theme-text: #1f2937;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply text-gray-900;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Better touch targets */
+  button, a {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Chinese Theme */
+.chinese-theme {
+  --theme-primary: #ff6b35;
+  --theme-dark: #000000;
+  --theme-accent: #ffffff;
+  --theme-background: #ffffff;
+  --theme-text: #1f1f1f;
+}
+
+/* Biryani Theme */
+.biryani-theme {
+  --theme-primary: #c92a2a;
+  --theme-dark: #800020;
+  --theme-accent: #d4af37;
+  --theme-background: #fff8e7;
+  --theme-text: #5c4033;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
