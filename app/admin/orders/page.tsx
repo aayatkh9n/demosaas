@@ -1,128 +1,121 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { getOrders, updateOrderStatus } from '@/lib/data/adminData';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { fetchAllOrders, updateOrderStatus } from '@/lib/data/adminOrderService';
 import { formatCurrency } from '@/lib/utils';
 import { Order, OrderStatus } from '@/types';
 
-export default function OrdersPage() {
+export default function AdminDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [filter, setFilter] = useState<OrderStatus | 'all'>('all');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadOrders();
   }, []);
 
-  const loadOrders = () => {
-    setOrders(getOrders().reverse()); // Most recent first
+  const loadOrders = async () => {
+    setLoading(true);
+    const data = await fetchAllOrders();
+    setOrders(data);
+    setLoading(false);
   };
 
-  const handleStatusUpdate = (orderId: string, newStatus: OrderStatus) => {
-    updateOrderStatus(orderId, newStatus);
+  const handleStatusUpdate = async (
+    orderId: string,
+    status: OrderStatus
+  ) => {
+    await updateOrderStatus(orderId, status);
     loadOrders();
   };
 
-  const filteredOrders = filter === 'all'
-    ? orders
-    : orders.filter(o => o.status === filter);
-
-  const statusColors = {
-    new: 'bg-blue-100 text-blue-800 border-blue-200',
-    accepted: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    preparing: 'bg-orange-100 text-orange-800 border-orange-200',
-    completed: 'bg-green-100 text-green-800 border-green-200',
+  const stats = {
+    new: orders.filter(o => o.status === 'new').length,
+    accepted: orders.filter(o => o.status === 'accepted').length,
+    preparing: orders.filter(o => o.status === 'preparing').length,
+    completed: orders.filter(o => o.status === 'completed').length,
+    totalRevenue: orders
+      .filter(o => o.status === 'completed')
+      .reduce((sum, o) => sum + o.total, 0),
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-4xl font-bold mb-8">All Orders</h1>
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-bold mb-8">Admin Dashboard</h1>
 
-          {/* Filter */}
-          <div className="flex gap-2 mb-6 flex-wrap">
-            <button
-              onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-                filter === 'all'
-                  ? 'bg-gray-800 text-white'
-                  : 'bg-white text-gray-800 hover:bg-gray-100'
-              }`}
-            >
-              All
-            </button>
-            {(['new', 'accepted', 'preparing', 'completed'] as OrderStatus[]).map(status => (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={`px-4 py-2 rounded-lg font-semibold transition-colors capitalize ${
-                  filter === status
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-white text-gray-800 hover:bg-gray-100'
-                }`}
-              >
-                {status}
-              </button>
-            ))}
-          </div>
+        {/* STATS */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+          <Stat label="New Orders" value={stats.new} />
+          <Stat label="Accepted" value={stats.accepted} />
+          <Stat label="Preparing" value={stats.preparing} />
+          <Stat label="Completed" value={stats.completed} />
+          <Stat
+            label="Total Revenue"
+            value={formatCurrency(stats.totalRevenue)}
+          />
+        </div>
 
-          {/* Orders List */}
-          {filteredOrders.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <p className="text-gray-500 text-lg">No orders found</p>
-            </div>
+        {/* QUICK LINKS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <DashboardLink
+            href="/admin/menu"
+            title="Manage Menu"
+            desc="Add, edit, or remove items"
+          />
+          <DashboardLink
+            href="/admin/settings"
+            title="Settings"
+            desc="Configure QR code & WhatsApp"
+          />
+          <DashboardLink
+            href="/admin/orders"
+            title="All Orders"
+            desc="View and manage orders"
+          />
+        </div>
+
+        {/* RECENT ORDERS */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-bold mb-4">Recent Orders</h2>
+
+          {loading ? (
+            <p className="text-gray-500">Loading orders…</p>
+          ) : orders.length === 0 ? (
+            <p className="text-gray-500">No orders yet</p>
           ) : (
             <div className="space-y-4">
-              {filteredOrders.map(order => (
-                <div key={order.id} className="bg-white rounded-lg shadow-md p-6">
-                  <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-4">
-                    <div className="mb-4 md:mb-0">
-                      <div className="flex items-center gap-4 mb-2">
-                        <h3 className="text-xl font-bold">Order #{order.id.slice(-8)}</h3>
-                        <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${statusColors[order.status]}`}>
-                          {order.status}
-                        </span>
-                      </div>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div>Created: {new Date(order.createdAt).toLocaleString()}</div>
-                        <div>Updated: {new Date(order.updatedAt).toLocaleString()}</div>
-                        {order.customerName && <div>Customer: {order.customerName}</div>}
-                        {order.customerPhone && <div>Phone: {order.customerPhone}</div>}
-                        {order.customerAddress && <div>Address: {order.customerAddress}</div>}
-                      </div>
+              {orders.slice(0, 5).map(order => (
+                <div
+                  key={order.id}
+                  className="border rounded-lg p-4 flex justify-between items-start"
+                >
+                  <div>
+                    <div className="font-semibold">
+                      Order #{order.id.slice(-6)}
                     </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold mb-2">{formatCurrency(order.total)}</div>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <div className="capitalize">{order.orderType}</div>
-                        <div>{order.paymentMethod}</div>
-                      </div>
+                    <div className="text-sm text-gray-600">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {order.items.length} items •{' '}
+                      {order.orderType} • {order.paymentMethod}
                     </div>
                   </div>
 
-                  {/* Order Items */}
-                  <div className="border-t border-gray-200 pt-4 mb-4">
-                    <h4 className="font-semibold mb-2">Items:</h4>
-                    <div className="space-y-2">
-                      {order.items.map(item => (
-                        <div key={item.id} className="flex justify-between text-sm">
-                          <span>
-                            {item.name} × {item.quantity}
-                          </span>
-                          <span className="font-semibold">
-                            {formatCurrency(item.price * item.quantity)}
-                          </span>
-                        </div>
-                      ))}
+                  <div className="text-right">
+                    <div className="font-bold text-lg">
+                      {formatCurrency(order.total)}
                     </div>
-                  </div>
-
-                  {/* Status Update */}
-                  <div className="border-t border-gray-200 pt-4">
-                    <label className="block text-sm font-medium mb-2">Update Status:</label>
                     <select
                       value={order.status}
-                      onChange={(e) => handleStatusUpdate(order.id, e.target.value as OrderStatus)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg font-semibold"
+                      onChange={e =>
+                        handleStatusUpdate(
+                          order.id,
+                          e.target.value as OrderStatus
+                        )
+                      }
+                      className="mt-2 border rounded px-3 py-1"
                     >
                       <option value="new">New</option>
                       <option value="accepted">Accepted</option>
@@ -136,7 +129,35 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
-    
+    </div>
   );
 }
 
+function Stat({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="bg-white rounded-lg shadow p-6 text-center">
+      <div className="text-3xl font-bold">{value}</div>
+      <div className="text-gray-600">{label}</div>
+    </div>
+  );
+}
+
+function DashboardLink({
+  href,
+  title,
+  desc,
+}: {
+  href: string;
+  title: string;
+  desc: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition"
+    >
+      <h3 className="font-bold text-lg">{title}</h3>
+      <p className="text-gray-600 text-sm">{desc}</p>
+    </Link>
+  );
+}

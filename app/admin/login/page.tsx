@@ -2,88 +2,74 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { supabase } from '@/lib/supabase/client';
 
-export default function AdminLogin() {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAdminAuth();
+export default function AdminLoginPage() {
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setIsLoading(true);
+    setLoading(true);
 
-    // Small delay for UX
-    await new Promise(resolve => setTimeout(resolve, 300));
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    if (login(password)) {
-      router.push('/admin');
-    } else {
-      setError('Incorrect password. Please try again.');
-      setPassword('');
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
     }
-    setIsLoading(false);
+
+    router.push('/admin');
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-lg shadow-xl p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Admin Access
-            </h1>
-            <p className="text-gray-600">
-              Owner-only area. Please enter your password.
-            </p>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <form
+        onSubmit={handleLogin}
+        className="bg-white p-8 rounded-xl shadow-md w-full max-w-md"
+      >
+        <h1 className="text-2xl font-bold mb-6 text-center">
+          Admin Login
+        </h1>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent"
-                placeholder="Enter admin password"
-                autoFocus
-                required
-              />
-            </div>
+        <input
+          type="email"
+          placeholder="Admin Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full mb-4 px-4 py-3 border rounded-lg"
+          required
+        />
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                {error}
-              </div>
-            )}
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full mb-4 px-4 py-3 border rounded-lg"
+          required
+        />
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gray-900 text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? 'Verifying...' : 'Login'}
-            </button>
-          </form>
+        {error && (
+          <p className="text-red-600 text-sm mb-4">{error}</p>
+        )}
 
-          <div className="mt-6 text-center text-xs text-gray-500">
-            <p>This is a protected area. Unauthorized access is prohibited.</p>
-          </div>
-        </div>
-      </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-black text-white py-3 rounded-lg"
+        >
+          {loading ? 'Logging in…' : 'Login'}
+        </button>
+      </form>
     </div>
   );
 }
-
-
-

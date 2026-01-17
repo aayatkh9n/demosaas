@@ -1,31 +1,99 @@
 'use client';
 
-import { useState } from 'react';
-import { getAdminSettings, saveAdminSettings } from '@/lib/data/adminData';
-import { AdminSettings } from '@/types';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import { FiSave } from 'react-icons/fi';
 import Image from 'next/image';
 
+type AdminSettings = {
+  id: number;
+  kitchen_name: string;
+  whatsapp_number: string;
+  upi_id: string;
+  upi_qr_code: string | null;
+};
+
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<AdminSettings>(getAdminSettings());
+  const [settings, setSettings] = useState<AdminSettings | null>(null);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    saveAdminSettings(settings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  // ✅ LOAD SINGLE SOURCE OF TRUTH (id = 1)
+  useEffect(() => {
+    const loadSettings = async () => {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('*')
+        .eq('id', 1)
+        .single();
+
+      if (error) {
+        console.error('Failed to load settings', error);
+        return;
+      }
+
+      setSettings(data);
+    };
+
+    loadSettings();
+  }, []);
+
+  // ✅ Upload QR → Supabase Storage (overwrite-safe)
+  const uploadQr = async (file: File) => {
+    const fileName = 'upi-qr.png';
+
+    const { error } = await supabase.storage
+      .from('qr-codes')
+      .upload(fileName, file, { upsert: true });
+
+    if (error) {
+      alert('QR upload failed');
+      return;
+    }
+
+    const { data } = supabase.storage
+      .from('qr-codes')
+      .getPublicUrl(fileName);
+
+    setSettings((prev) =>
+      prev ? { ...prev, upi_qr_code: data.publicUrl } : prev
+    );
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSettings({ ...settings, upiQrCode: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+  // ✅ SAVE (ALWAYS id = 1)
+  const handleSave = async () => {
+    if (!settings) return;
+
+    setSaving(true);
+
+    const { error } = await supabase
+      .from('admin_settings')
+      .update({
+        kitchen_name: settings.kitchen_name,
+        whatsapp_number: settings.whatsapp_number,
+        upi_id: settings.upi_id,
+        upi_qr_code: settings.upi_qr_code,
+      })
+      .eq('id', 1);
+
+    setSaving(false);
+
+    if (error) {
+      alert('Failed to save settings');
+      return;
     }
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
+
+  if (!settings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading settings…
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -33,109 +101,81 @@ export default function SettingsPage() {
         <h1 className="text-4xl font-bold mb-8">Settings</h1>
 
         <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
-            {/* Kitchen Name */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Kitchen Name</label>
-              <input
-                type="text"
-                value={settings.kitchenName}
-                onChange={(e) => setSettings({ ...settings, kitchenName: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent"
-                placeholder="Cloud Kitchen"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Kitchen Name</label>
+            <input
+              value={settings.kitchen_name}
+              onChange={(e) =>
+                setSettings({ ...settings, kitchen_name: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-lg"
+            />
+          </div>
 
-            {/* WhatsApp Number */}
-            <div>
-              <label className="block text-sm font-medium mb-2">WhatsApp Number</label>
-              <input
-                type="tel"
-                value={settings.whatsappNumber}
-                onChange={(e) => setSettings({ ...settings, whatsappNumber: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent"
-                placeholder="+91 8850055287"
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Include country code (e.g., +91 for India)
-              </p>
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              WhatsApp Number
+            </label>
+            <input
+              value={settings.whatsapp_number}
+              onChange={(e) =>
+                setSettings({ ...settings, whatsapp_number: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-lg"
+            />
+          </div>
 
-            {/* UPI ID */}
-            <div>
-              <label className="block text-sm font-medium mb-2">UPI ID</label>
-              <input
-                type="text"
-                value={settings.upiId}
-                onChange={(e) => setSettings({ ...settings, upiId: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent"
-                placeholder="yourupi@paytm"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">UPI ID</label>
+            <input
+              value={settings.upi_id}
+              onChange={(e) =>
+                setSettings({ ...settings, upi_id: e.target.value })
+              }
+              className="w-full px-4 py-2 border rounded-lg"
+            />
+          </div>
 
-            {/* UPI QR Code */}
-            <div>
-              <label className="block text-sm font-medium mb-2">UPI QR Code</label>
-              <div className="mb-4">
-                {settings.upiQrCode && (
-                  <div className="border-2 border-gray-200 rounded-lg p-4 inline-block">
-                    <Image
-                      src={settings.upiQrCode}
-                      alt="UPI QR Code"
-                      width={200}
-                      height={200}
-                      className="rounded-lg"
-                      unoptimized
-                    />
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2">
-                <label className="block text-sm font-medium">Upload QR Code Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-gray-800 file:text-white hover:file:bg-gray-900"
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              UPI QR Code
+            </label>
+
+            {settings.upi_qr_code && (
+              <div className="mb-4 border rounded-lg inline-block p-3">
+                <Image
+                  src={settings.upi_qr_code}
+                  alt="UPI QR"
+                  width={200}
+                  height={200}
+                  unoptimized
                 />
               </div>
-              <div className="mt-2">
-                <label className="block text-sm font-medium mb-2">Or enter image URL</label>
-                <input
-                  type="text"
-                  value={settings.upiQrCode}
-                  onChange={(e) => setSettings({ ...settings, upiQrCode: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-800 focus:border-transparent"
-                  placeholder="https://..."
-                />
-              </div>
-            </div>
+            )}
 
-            {/* Save Button */}
-            <button
-              onClick={handleSave}
-              className={`w-full py-4 rounded-lg font-semibold text-lg transition-colors flex items-center justify-center gap-2 ${
-                saved
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-800 text-white hover:bg-gray-900'
-              }`}
-            >
-              <FiSave />
-              {saved ? 'Settings Saved!' : 'Save Settings'}
-            </button>
-        </div>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                if (e.target.files?.[0]) {
+                  uploadQr(e.target.files[0]);
+                }
+              }}
+            />
+          </div>
 
-        {/* Instructions */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="font-semibold mb-2 text-blue-900">Instructions:</h3>
-          <ul className="list-disc list-inside space-y-1 text-sm text-blue-800">
-            <li>WhatsApp number should include country code (e.g., +91 for India)</li>
-            <li>QR code image should be a clear, high-quality image</li>
-            <li>UPI ID will be displayed on the payment page</li>
-            <li>Changes take effect immediately after saving</li>
-          </ul>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className={`w-full py-4 rounded-lg font-semibold flex items-center justify-center gap-2 ${
+              saved ? 'bg-green-600' : 'bg-gray-900'
+            } text-white`}
+          >
+            <FiSave />
+            {saved ? 'Saved!' : saving ? 'Saving…' : 'Save Settings'}
+          </button>
         </div>
       </div>
     </div>
   );
 }
-

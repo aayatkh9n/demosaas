@@ -1,67 +1,96 @@
+import { supabase } from '@/lib/supabase/client';
 import { AdminSettings, Order, OrderStatus } from '@/types';
 
-const STORAGE_KEYS = {
-  SETTINGS: 'admin_settings',
-  ORDERS: 'admin_orders',
-};
+/* ================================
+   ADMIN SETTINGS (SUPABASE)
+================================ */
 
-export const defaultAdminSettings: AdminSettings = {
-  kitchenName: 'Cloud Kitchen',
-  whatsappNumber: '+918850055287',
-  upiQrCode: 'https://via.placeholder.com/300x300/000000/FFFFFF?text=UPI+QR+Code',
-  upiId: 'yourupi@paytm',
-};
+export const getAdminSettings = async (): Promise<AdminSettings> => {
+  const { data, error } = await supabase
+    .from('admin_settings')
+    .select('*')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .single();
 
-export const getAdminSettings = (): AdminSettings => {
-  if (typeof window === 'undefined') return defaultAdminSettings;
-  
-  const stored = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return defaultAdminSettings;
-    }
+  if (error || !data) {
+    return {
+      kitchenName: 'Cloud Kitchen',
+      whatsappNumber: '',
+      upiQrCode: '',
+      upiId: '',
+    };
   }
-  return defaultAdminSettings;
+
+  return {
+    kitchenName: data.kitchen_name,
+    whatsappNumber: data.whatsapp_number,
+    upiQrCode: data.upi_qr_code,
+    upiId: data.upi_id,
+  };
 };
 
-export const saveAdminSettings = (settings: AdminSettings): void => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
-};
+export const saveAdminSettings = async (
+  settings: AdminSettings
+): Promise<void> => {
+  const { error } = await supabase.from('admin_settings').insert({
+    kitchen_name: settings.kitchenName,
+    whatsapp_number: settings.whatsappNumber,
+    upi_qr_code: settings.upiQrCode,
+    upi_id: settings.upiId,
+    updated_at: new Date().toISOString(),
+  });
 
-export const getOrders = (): Order[] => {
-  if (typeof window === 'undefined') return [];
-  
-  const stored = localStorage.getItem(STORAGE_KEYS.ORDERS);
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch {
-      return [];
-    }
-  }
-  return [];
-};
-
-export const saveOrder = (order: Order): void => {
-  if (typeof window === 'undefined') return;
-  
-  const orders = getOrders();
-  orders.push(order);
-  localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
-};
-
-export const updateOrderStatus = (orderId: string, status: OrderStatus): void => {
-  if (typeof window === 'undefined') return;
-  
-  const orders = getOrders();
-  const orderIndex = orders.findIndex(o => o.id === orderId);
-  if (orderIndex !== -1) {
-    orders[orderIndex].status = status;
-    orders[orderIndex].updatedAt = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+  if (error) {
+    console.error('Failed to save admin settings', error);
+    throw error;
   }
 };
 
+/* ================================
+   ORDERS (SUPABASE)
+================================ */
+
+export const getOrders = async (): Promise<Order[]> => {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error || !data) {
+    console.error('Failed to fetch orders', error);
+    return [];
+  }
+
+  return data.map(order => ({
+    id: order.id,
+    items: order.items,
+    total: order.total,
+    orderType: order.order_type,
+    paymentMethod: order.payment_method,
+    status: order.status,
+    customerName: order.customer_name,
+    customerPhone: order.customer_phone,
+    customerAddress: order.customer_address,
+    createdAt: order.created_at,
+    updatedAt: order.updated_at,
+  }));
+};
+
+export const updateOrderStatus = async (
+  orderId: string,
+  status: OrderStatus
+): Promise<void> => {
+  const { error } = await supabase
+    .from('orders')
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (error) {
+    console.error('Failed to update order status', error);
+    throw error;
+  }
+};

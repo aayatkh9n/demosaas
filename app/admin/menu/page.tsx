@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { menuItems as initialMenuItems } from '@/lib/data/menuData';
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { supabase } from '@/lib/supabase/client';
 import { formatCurrency } from '@/lib/utils';
 import { MenuItem, Cuisine } from '@/types';
 import {
@@ -11,12 +12,10 @@ import {
   FiX,
   FiCheck,
 } from 'react-icons/fi';
-import Image from 'next/image';
-
-const STORAGE_KEY = 'admin_menu_items';
 
 export default function MenuManagement() {
   const [items, setItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -30,74 +29,107 @@ export default function MenuManagement() {
     description: '',
   });
 
-  // ✅ Load menu on client only (Vercel-safe)
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        setItems(JSON.parse(stored));
-        return;
-      } catch {}
-    }
-    setItems(initialMenuItems);
-  }, []);
+  // =============================
+  // LOAD MENU FROM SUPABASE
+  // =============================
+  const loadMenu = async () => {
+    const { data, error } = await supabase
+      .from('menu_items')
+      .select('*')
+      .order('created_at', { ascending: true });
 
-  const persist = (updated: MenuItem[]) => {
-    setItems(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    if (error) {
+      console.error('Failed to load menu', error);
+      return;
+    }
+
+    setItems(data as MenuItem[]);
+    setLoading(false);
   };
 
-  const handleSave = () => {
+  useEffect(() => {
+    loadMenu();
+  }, []);
+
+  // =============================
+  // SAVE (ADD / UPDATE)
+  // =============================
+  const handleSave = async () => {
     if (!formData.name || !formData.price || !formData.category) {
       alert('Please fill all required fields');
       return;
     }
 
-    let updated: MenuItem[];
-
     if (editingItem) {
-      updated = items.map(item =>
-        item.id === editingItem.id
-          ? { ...item, ...formData } as MenuItem
-          : item
-      );
+      // UPDATE
+      const { error } = await supabase
+        .from('menu_items')
+        .update({
+          name: formData.name,
+          price: Number(formData.price),
+          cuisine: formData.cuisine,
+          category: formData.category,
+          image: formData.image,
+          availability: formData.availability,
+          description: formData.description,
+        })
+        .eq('id', editingItem.id);
+
+      if (error) {
+        alert('Update failed');
+        return;
+      }
     } else {
-      const newItem: MenuItem = {
+      // INSERT
+      const { error } = await supabase.from('menu_items').insert({
         id: `${formData.cuisine === 'chinese' ? 'ch' : 'bi'}-${Date.now()}`,
-        name: formData.name!,
+        name: formData.name,
         price: Number(formData.price),
-        cuisine: formData.cuisine as Cuisine,
-        category: formData.category!,
-        image: formData.image || 'https://via.placeholder.com/400x300',
+        cuisine: formData.cuisine,
+        category: formData.category,
+        image:
+          formData.image ||
+          'https://via.placeholder.com/400x300?text=Food+Image',
         availability: formData.availability ?? true,
         description: formData.description,
-      };
-      updated = [...items, newItem];
+      });
+
+      if (error) {
+        alert('Insert failed');
+        return;
+      }
     }
 
-    persist(updated);
     handleCancel();
+    loadMenu();
+  };
+
+  // =============================
+  // DELETE
+  // =============================
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this item?')) return;
+
+    await supabase.from('menu_items').delete().eq('id', id);
+    loadMenu();
+  };
+
+  // =============================
+  // TOGGLE AVAILABILITY
+  // =============================
+  const toggleAvailability = async (item: MenuItem) => {
+    await supabase
+      .from('menu_items')
+      .update({ availability: !item.availability })
+      .eq('id', item.id);
+
+    loadMenu();
   };
 
   const handleEdit = (item: MenuItem) => {
     setEditingItem(item);
     setFormData(item);
     setShowForm(true);
-  };
-
-  const handleDelete = (id: string) => {
-    if (!confirm('Delete this item?')) return;
-    persist(items.filter(item => item.id !== id));
-  };
-
-  const toggleAvailability = (id: string) => {
-    persist(
-      items.map(item =>
-        item.id === id
-          ? { ...item, availability: !item.availability }
-          : item
-      )
-    );
   };
 
   const handleCancel = () => {
@@ -114,12 +146,23 @@ export default function MenuManagement() {
     });
   };
 
+  // =============================
+  // GROUP BY CUISINE + CATEGORY
+  // =============================
   const grouped = items.reduce((acc, item) => {
     const key = `${item.cuisine}-${item.category}`;
     acc[key] = acc[key] || [];
     acc[key].push(item);
     return acc;
   }, {} as Record<string, MenuItem[]>);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading menu…
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -131,7 +174,7 @@ export default function MenuManagement() {
               handleCancel();
               setShowForm(true);
             }}
-            className="bg-gray-900 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 hover:bg-black"
+            className="bg-black text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
           >
             <FiPlus /> Add Item
           </button>
@@ -232,7 +275,7 @@ export default function MenuManagement() {
               <div className="flex gap-4 mt-6">
                 <button
                   onClick={handleSave}
-                  className="flex-1 bg-gray-900 text-white py-3 rounded-lg font-semibold"
+                  className="flex-1 bg-black text-white py-3 rounded-lg font-semibold"
                 >
                   Save
                 </button>
@@ -296,7 +339,7 @@ export default function MenuManagement() {
                           </button>
 
                           <button
-                            onClick={() => toggleAvailability(item.id)}
+                            onClick={() => toggleAvailability(item)}
                             className={`flex-1 py-2 rounded text-white ${
                               item.availability
                                 ? 'bg-yellow-600'
