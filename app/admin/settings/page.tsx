@@ -6,7 +6,7 @@ import { FiSave } from 'react-icons/fi';
 import Image from 'next/image';
 
 type AdminSettings = {
-  id: number;
+  id: string;
   kitchen_name: string;
   whatsapp_number: string;
   upi_id: string;
@@ -15,31 +15,60 @@ type AdminSettings = {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AdminSettings | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  // ✅ LOAD SINGLE SOURCE OF TRUTH (id = 1)
+  // ✅ ALWAYS LOAD SAFELY
   useEffect(() => {
     const loadSettings = async () => {
       const { data, error } = await supabase
         .from('admin_settings')
         .select('*')
-        .eq('id', 1)
-        .single();
+        .order('updated_at', { ascending: false })
+        .limit(1);
 
       if (error) {
         console.error('Failed to load settings', error);
+        setLoading(false);
         return;
       }
 
-      setSettings(data);
+      // No row exists → create one
+      if (!data || data.length === 0) {
+        const { data: inserted, error: insertError } = await supabase
+          .from('admin_settings')
+          .insert({
+            kitchen_name: 'Cloud Kitchen',
+            whatsapp_number: '',
+            upi_id: '',
+            upi_qr_code: null,
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Failed to create settings', insertError);
+          setLoading(false);
+          return;
+        }
+
+        setSettings(inserted);
+        setLoading(false);
+        return;
+      }
+
+      setSettings(data[0]);
+      setLoading(false);
     };
 
     loadSettings();
   }, []);
 
-  // ✅ Upload QR → Supabase Storage (overwrite-safe)
+  // ✅ UPLOAD QR
   const uploadQr = async (file: File) => {
+    if (!settings) return;
+
     const fileName = 'upi-qr.png';
 
     const { error } = await supabase.storage
@@ -55,12 +84,10 @@ export default function SettingsPage() {
       .from('qr-codes')
       .getPublicUrl(fileName);
 
-    setSettings((prev) =>
-      prev ? { ...prev, upi_qr_code: data.publicUrl } : prev
-    );
+    setSettings({ ...settings, upi_qr_code: data.publicUrl });
   };
 
-  // ✅ SAVE (ALWAYS id = 1)
+  // ✅ SAVE SETTINGS
   const handleSave = async () => {
     if (!settings) return;
 
@@ -74,7 +101,7 @@ export default function SettingsPage() {
         upi_id: settings.upi_id,
         upi_qr_code: settings.upi_qr_code,
       })
-      .eq('id', 1);
+      .eq('id', settings.id);
 
     setSaving(false);
 
@@ -87,10 +114,19 @@ export default function SettingsPage() {
     setTimeout(() => setSaved(false), 2000);
   };
 
-  if (!settings) {
+  // ✅ NEVER FREEZE UI
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         Loading settings…
+      </div>
+    );
+  }
+
+  if (!settings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-500">
+        Failed to load settings
       </div>
     );
   }
@@ -101,78 +137,49 @@ export default function SettingsPage() {
         <h1 className="text-4xl font-bold mb-8">Settings</h1>
 
         <div className="bg-white rounded-lg shadow-md p-6 space-y-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">Kitchen Name</label>
-            <input
-              value={settings.kitchen_name}
-              onChange={(e) =>
-                setSettings({ ...settings, kitchen_name: e.target.value })
-              }
-              className="w-full px-4 py-2 border rounded-lg"
+          <input
+            value={settings.kitchen_name}
+            onChange={e => setSettings({ ...settings, kitchen_name: e.target.value })}
+            className="w-full px-4 py-2 border rounded"
+            placeholder="Kitchen name"
+          />
+
+          <input
+            value={settings.whatsapp_number}
+            onChange={e => setSettings({ ...settings, whatsapp_number: e.target.value })}
+            className="w-full px-4 py-2 border rounded"
+            placeholder="WhatsApp number"
+          />
+
+          <input
+            value={settings.upi_id}
+            onChange={e => setSettings({ ...settings, upi_id: e.target.value })}
+            className="w-full px-4 py-2 border rounded"
+            placeholder="UPI ID"
+          />
+
+          {settings.upi_qr_code && (
+            <Image
+              src={settings.upi_qr_code}
+              alt="QR"
+              width={200}
+              height={200}
+              unoptimized
             />
-          </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              WhatsApp Number
-            </label>
-            <input
-              value={settings.whatsapp_number}
-              onChange={(e) =>
-                setSettings({ ...settings, whatsapp_number: e.target.value })
-              }
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">UPI ID</label>
-            <input
-              value={settings.upi_id}
-              onChange={(e) =>
-                setSettings({ ...settings, upi_id: e.target.value })
-              }
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              UPI QR Code
-            </label>
-
-            {settings.upi_qr_code && (
-              <div className="mb-4 border rounded-lg inline-block p-3">
-                <Image
-                  src={settings.upi_qr_code}
-                  alt="UPI QR"
-                  width={200}
-                  height={200}
-                  unoptimized
-                />
-              </div>
-            )}
-
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                if (e.target.files?.[0]) {
-                  uploadQr(e.target.files[0]);
-                }
-              }}
-            />
-          </div>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={e => e.target.files && uploadQr(e.target.files[0])}
+          />
 
           <button
             onClick={handleSave}
             disabled={saving}
-            className={`w-full py-4 rounded-lg font-semibold flex items-center justify-center gap-2 ${
-              saved ? 'bg-green-600' : 'bg-gray-900'
-            } text-white`}
+            className="w-full py-3 bg-black text-white rounded"
           >
-            <FiSave />
-            {saved ? 'Saved!' : saving ? 'Saving…' : 'Save Settings'}
+            <FiSave /> {saved ? 'Saved!' : saving ? 'Saving…' : 'Save Settings'}
           </button>
         </div>
       </div>
